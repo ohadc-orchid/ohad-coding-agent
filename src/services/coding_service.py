@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from typing import Dict, Optional, List
@@ -14,6 +13,10 @@ class CodingService:
         self._logger = logging.getLogger(__name__)
         self._llm_client = llm_client_factory()
         self._repo_reader_service = RepositoryReaderService()
+
+    @property
+    def repo_reader_service(self):
+        return self._repo_reader_service
 
     def code_feature(
         self, task: str, local_repo_path: Optional[str] = None
@@ -119,3 +122,43 @@ class CodingService:
             )
 
         self._logger.info("Taught the llm the code")
+
+    def perform_code_review(self):
+        prompt = """
+        AI Agent Code Review Prompt
+        
+        You are tasked with reviewing an input code file to identify potential bugs, issues, and areas for improvement. Your output should be a structured JSON list where each entry includes the following properties:
+        
+        explanation: A concise description of the issue, including why it might cause problems or be suboptimal, or how can it be improved.
+        fix_suggestion: A clear suggestion for how to fix the issue, including a brief explanation of why the fix works.
+        Your analysis should include syntax errors, logical bugs, performance issues, potential security vulnerabilities, and non-compliance with coding best practices.
+        
+        Input: A code file in Python (or specify another language if needed).
+        Output: A JSON list in the format specified above.
+        
+        Additional Instructions:
+        
+        Ensure that your explanations and suggestions are detailed enough to guide a developer in addressing the issues.
+        Do not include unrelated or unnecessary details in the JSON output.
+        Try to review the architecture, design, and implementation of the code comprehensively.
+        Do not only focus on syntax errors; consider all aspects of code quality and robustness.
+        Be VERY critical but also constructive in your feedback. 
+        If no issues are found in a specific function, exclude it from the output.
+        Here is an example of the expected JSON structure:
+        
+        [
+          {
+            "explanation": "The function does not handle non-numeric input, which could cause a runtime error.",
+            "suggestion": "Add input validation to check if 'a' and 'b' are numbers before performing the addition."
+          },
+          {
+            "explanation": "Division by zero is not handled, leading to a potential ZeroDivisionError.",
+            "suggestion": "Include a check to ensure 'b' is not zero before performing the division."
+          }
+        ]
+        
+        Only return the JSON object. No additional text or explanation AT ALL COSTS.
+        I will feed your response directly to a JSON parser, so it must strictly adhere to the JSON format.
+        If bugs were not found, do not include any entries in the 'issues' list.
+        """
+        return self._llm_client.send_message_expecting_json_response(prompt)

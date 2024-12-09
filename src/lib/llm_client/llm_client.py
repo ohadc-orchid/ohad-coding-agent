@@ -16,6 +16,10 @@ class LlMClient(abc.ABC):
         self, message: str, num_attempts: int = 10, **kwargs
     ) -> Dict:
         response = self.send_message(message, **kwargs)
+
+        # Clean the response from any non-json characters
+        response = response.removeprefix('```json').removesuffix('```').removeprefix('```').strip()
+
         try:
             return json.loads(response)
         except json.JSONDecodeError:
